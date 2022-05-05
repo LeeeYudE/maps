@@ -42,6 +42,8 @@ class MapboxMap extends StatefulWidget {
     this.onCameraTrackingDismissed,
     this.onCameraTrackingChanged,
     this.onCameraIdle,
+    this.onCameraStart,
+    this.onCameraMove,
     this.onMapIdle,
     this.annotationOrder = const [
       AnnotationType.line,
@@ -213,6 +215,8 @@ class MapboxMap extends StatefulWidget {
 
   // Called when camera movement has ended.
   final OnCameraIdleCallback? onCameraIdle;
+  final OnCameraIdleCallback? onCameraStart;
+  final OnCameraIdleCallback? onCameraMove;
 
   /// Called when map view is entering an idle state, and no more drawing will
   /// be necessary until new data is loaded or there is some interaction with
@@ -308,6 +312,8 @@ class _MapboxMapState extends State<MapboxMap> {
       onCameraTrackingDismissed: widget.onCameraTrackingDismissed,
       onCameraTrackingChanged: widget.onCameraTrackingChanged,
       onCameraIdle: widget.onCameraIdle,
+      onCameraStart: widget.onCameraStart,
+      onCameraMove: widget.onCameraMove,
       onMapIdle: widget.onMapIdle,
       annotationOrder: widget.annotationOrder,
       annotationConsumeTapEvents: widget.annotationConsumeTapEvents,

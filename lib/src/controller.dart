@@ -28,6 +28,8 @@ typedef void OnCameraTrackingDismissedCallback();
 typedef void OnCameraTrackingChangedCallback(MyLocationTrackingMode mode);
 
 typedef void OnCameraIdleCallback();
+typedef void OnCameraStartCallback();
+typedef void OnCameraMoveCallback();
 
 typedef void OnMapIdleCallback();
 
@@ -61,6 +63,8 @@ class MapboxMapController extends ChangeNotifier {
     this.onMapIdle,
     this.onUserLocationUpdated,
     this.onCameraIdle,
+    this.onCameraStart,
+    this.onCameraMove
   }) : _mapboxGlPlatform = mapboxGlPlatform {
     _cameraPosition = initialCameraPosition;
 
@@ -86,11 +90,17 @@ class MapboxMapController extends ChangeNotifier {
 
     _mapboxGlPlatform.onCameraMoveStartedPlatform.add((_) {
       _isCameraMoving = true;
+      if (onCameraStart != null) {
+        onCameraStart!();
+      }
       notifyListeners();
     });
 
     _mapboxGlPlatform.onCameraMovePlatform.add((cameraPosition) {
       _cameraPosition = cameraPosition;
+      if (onCameraMove != null) {
+        onCameraMove!();
+      }
       notifyListeners();
     });
 
@@ -190,6 +200,8 @@ class MapboxMapController extends ChangeNotifier {
   final OnCameraTrackingChangedCallback? onCameraTrackingChanged;
 
   final OnCameraIdleCallback? onCameraIdle;
+  final OnCameraIdleCallback? onCameraStart;
+  final OnCameraIdleCallback? onCameraMove;
 
   final OnMapIdleCallback? onMapIdle;
 

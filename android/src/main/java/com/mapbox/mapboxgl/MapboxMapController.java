@@ -85,6 +85,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import android.graphics.PointF;
 
 /** Controller of a single MapboxMaps MapView instance. */
 @SuppressLint("MissingPermission")
@@ -204,6 +205,7 @@ final class MapboxMapController
   @Override
   public void onMapReady(MapboxMap mapboxMap) {
     this.mapboxMap = mapboxMap;
+    this.mapboxMap.getUiSettings().setFocalPoint(new PointF(Float.parseFloat(String.valueOf(mapView.getWidth() / 2.0)), Float.parseFloat(String.valueOf(mapView.getHeight() / 2.0))));
     if (mapReadyResult != null) {
       mapReadyResult.success(null);
       mapReadyResult = null;
