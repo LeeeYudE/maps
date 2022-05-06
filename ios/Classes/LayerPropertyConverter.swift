@@ -239,8 +239,8 @@ class LayerPropertyConverter {
                 fillLayer.fillTranslationAnchor = expression
             case "fill-pattern":
                 fillLayer.fillPattern = expression
-            case "fill-sort-key":
-                fillLayer.fillSortKey = expression
+//             case "fill-sort-key":
+//                 fillLayer.fillSortKey = expression
 //             case "visibility":
 //                 fillLayer.isVisible = propertyValue == "visible"
 
