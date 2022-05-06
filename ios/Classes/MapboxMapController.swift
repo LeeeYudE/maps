@@ -39,7 +39,7 @@ class MapboxMapController: NSObject, FlutterPlatformView, MGLMapViewDelegate, Ma
         registrar: FlutterPluginRegistrar
     ) {
         if let args = args as? [String: Any] {
-            if let token = args["accessToken"] as? String? {
+            if let token = args["accessToken"] as? NSString? {
                 MGLAccountManager.accessToken = token
             }
         }

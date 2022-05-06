@@ -160,11 +160,10 @@ class LayerPropertyConverter {
                 circleLayer.circleStrokeColor = expression
             case "circle-stroke-opacity":
                 circleLayer.circleStrokeOpacity = expression
-            case "circle-sort-key":
-                circleLayer.circleSortKey = expression
+//             case "circle-sort-key":
+//                 circleLayer.circleSortKey = expression
             case "visibility":
                 circleLayer.isVisible = propertyValue == "visible"
-
             default:
                 break
             }
@@ -208,8 +207,8 @@ class LayerPropertyConverter {
                 lineLayer.lineMiterLimit = expression
             case "line-round-limit":
                 lineLayer.lineRoundLimit = expression
-            case "line-sort-key":
-                lineLayer.lineSortKey = expression
+//             case "line-sort-key":
+//                 lineLayer.lineSortKey = expression
             case "visibility":
                 lineLayer.isVisible = propertyValue == "visible"
 
@@ -242,8 +241,8 @@ class LayerPropertyConverter {
                 fillLayer.fillPattern = expression
             case "fill-sort-key":
                 fillLayer.fillSortKey = expression
-            case "visibility":
-                fillLayer.isVisible = propertyValue == "visible"
+//             case "visibility":
+//                 fillLayer.isVisible = propertyValue == "visible"
 
             default:
                 break
