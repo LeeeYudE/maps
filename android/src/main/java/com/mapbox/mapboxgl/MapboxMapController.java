@@ -85,7 +85,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import android.graphics.PointF;
+
+import android.view.ViewTreeObserver;
 
 /** Controller of a single MapboxMaps MapView instance. */
 @SuppressLint("MissingPermission")
@@ -110,7 +111,7 @@ final class MapboxMapController
   private final Context context;
   private final String styleStringInitial;
   private MapView mapView;
-  private MapboxMap mapboxMap;
+  private MapboxMap mMapboxMap;
   private boolean trackCameraPosition = false;
   private boolean myLocationEnabled = false;
   private int myLocationTrackingMode = 0;
@@ -142,12 +143,12 @@ final class MapboxMapController
           updateMyLocationEnabled();
 
           if (null != bounds) {
-            mapboxMap.setLatLngBoundsForCameraTarget(bounds);
+            mMapboxMap.setLatLngBoundsForCameraTarget(bounds);
           }
 
-          mapboxMap.addOnMapClickListener(MapboxMapController.this);
-          mapboxMap.addOnMapLongClickListener(MapboxMapController.this);
-          localizationPlugin = new LocalizationPlugin(mapView, mapboxMap, style);
+          mMapboxMap.addOnMapClickListener(MapboxMapController.this);
+          mMapboxMap.addOnMapLongClickListener(MapboxMapController.this);
+          localizationPlugin = new LocalizationPlugin(mapView, mMapboxMap, style);
 
           methodChannel.invokeMethod("map#onStyleLoaded", null);
         }
@@ -191,21 +192,31 @@ final class MapboxMapController
   }
 
   private void moveCamera(CameraUpdate cameraUpdate) {
-    mapboxMap.moveCamera(cameraUpdate);
+    mMapboxMap.moveCamera(cameraUpdate);
   }
 
   private void animateCamera(CameraUpdate cameraUpdate) {
-    mapboxMap.animateCamera(cameraUpdate);
+    mMapboxMap.animateCamera(cameraUpdate);
   }
 
   private CameraPosition getCameraPosition() {
-    return trackCameraPosition ? mapboxMap.getCameraPosition() : null;
+    return trackCameraPosition ? mMapboxMap.getCameraPosition() : null;
   }
 
   @Override
   public void onMapReady(MapboxMap mapboxMap) {
-    this.mapboxMap = mapboxMap;
-    this.mapboxMap.getUiSettings().setFocalPoint(new PointF(Float.parseFloat(String.valueOf(mapView.getWidth() / 2.0)), Float.parseFloat(String.valueOf(mapView.getHeight() / 2.0))));
+    this.mMapboxMap = mapboxMap;
+    // View 需要测量的视图内容高度
+    ViewTreeObserver observer = mapView.getViewTreeObserver();
+    observer.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+      @Override
+      public void onGlobalLayout() {
+        Log.d(TAG,"地图高度 = " + (String.valueOf(mapView.getWidth())) + " 地图高度 = "+(String.valueOf(mapView.getHeight())));
+        mapboxMap.getUiSettings().setFocalPoint(new PointF(Float.parseFloat(String.valueOf(mapView.getWidth() / 2.0)), Float.parseFloat(String.valueOf(mapView.getHeight() / 2.0))));
+        mapView.getViewTreeObserver().removeGlobalOnLayoutListener(this);
+      }
+    });
+
     if (mapReadyResult != null) {
       mapReadyResult.success(null);
       mapReadyResult = null;
@@ -250,19 +261,19 @@ final class MapboxMapController
     if (styleString == null || styleString.isEmpty()) {
       Log.e(TAG, "setStyleString - string empty or null");
     } else if (styleString.startsWith("{") || styleString.startsWith("[")) {
-      mapboxMap.setStyle(new Style.Builder().fromJson(styleString), onStyleLoadedCallback);
+      mMapboxMap.setStyle(new Style.Builder().fromJson(styleString), onStyleLoadedCallback);
     } else if (styleString.startsWith("/")) {
       // Absolute path
-      mapboxMap.setStyle(
+      mMapboxMap.setStyle(
           new Style.Builder().fromUri("file://" + styleString), onStyleLoadedCallback);
     } else if (!styleString.startsWith("http://")
         && !styleString.startsWith("https://")
         && !styleString.startsWith("mapbox://")) {
       // We are assuming that the style will be loaded from an asset here.
       String key = MapboxMapsPlugin.flutterAssets.getAssetFilePathByName(styleString);
-      mapboxMap.setStyle(new Style.Builder().fromUri("asset://" + key), onStyleLoadedCallback);
+      mMapboxMap.setStyle(new Style.Builder().fromUri("asset://" + key), onStyleLoadedCallback);
     } else {
-      mapboxMap.setStyle(new Style.Builder().fromUri(styleString), onStyleLoadedCallback);
+      mMapboxMap.setStyle(new Style.Builder().fromUri(styleString), onStyleLoadedCallback);
     }
   }
 
@@ -270,7 +281,7 @@ final class MapboxMapController
   private void enableLocationComponent(@NonNull Style style) {
     if (hasLocationPermission()) {
       locationEngine = LocationEngineProvider.getBestLocationEngine(context);
-      locationComponent = mapboxMap.getLocationComponent();
+      locationComponent = mMapboxMap.getLocationComponent();
       locationComponent.activateLocationComponent(
           context, style, buildLocationComponentOptions(style));
       locationComponent.setLocationComponentEnabled(true);
@@ -584,7 +595,7 @@ final class MapboxMapController
       Collections.reverse(layersInOrder);
 
       for (String id : layersInOrder) {
-        List<Feature> features = mapboxMap.queryRenderedFeatures(in, id);
+        List<Feature> features = mMapboxMap.queryRenderedFeatures(in, id);
         if (!features.isEmpty()) {
           return features.get(0);
         }
@@ -598,7 +609,7 @@ final class MapboxMapController
 
     switch (call.method) {
       case "map#waitForMap":
-        if (mapboxMap != null) {
+        if (mMapboxMap != null) {
           result.success(null);
           return;
         }
@@ -660,7 +671,7 @@ final class MapboxMapController
       case "map#getVisibleRegion":
         {
           Map<String, Object> reply = new HashMap<>();
-          VisibleRegion visibleRegion = mapboxMap.getProjection().getVisibleRegion();
+          VisibleRegion visibleRegion = mMapboxMap.getProjection().getVisibleRegion();
           reply.put(
               "sw",
               Arrays.asList(
@@ -676,7 +687,7 @@ final class MapboxMapController
         {
           Map<String, Object> reply = new HashMap<>();
           PointF pointf =
-              mapboxMap
+              mMapboxMap
                   .getProjection()
                   .toScreenLocation(
                       new LatLng(call.argument("latitude"), call.argument("longitude")));
@@ -692,7 +703,7 @@ final class MapboxMapController
 
           for (int i = 0; i < param.length; i += 2) {
             PointF pointf =
-                mapboxMap.getProjection().toScreenLocation(new LatLng(param[i], param[i + 1]));
+                mMapboxMap.getProjection().toScreenLocation(new LatLng(param[i], param[i + 1]));
             reply[i] = pointf.x;
             reply[i + 1] = pointf.y;
           }
@@ -704,7 +715,7 @@ final class MapboxMapController
         {
           Map<String, Object> reply = new HashMap<>();
           LatLng latlng =
-              mapboxMap
+              mMapboxMap
                   .getProjection()
                   .fromScreenLocation(
                       new PointF(
@@ -719,7 +730,7 @@ final class MapboxMapController
         {
           Map<String, Object> reply = new HashMap<>();
           Double retVal =
-              mapboxMap
+              mMapboxMap
                   .getProjection()
                   .getMetersPerPixelAtLatitude((Double) call.argument("latitude"));
           reply.put("metersperpixel", retVal);
@@ -729,14 +740,14 @@ final class MapboxMapController
       case "camera#move":
         {
           final CameraUpdate cameraUpdate =
-              Convert.toCameraUpdate(call.argument("cameraUpdate"), mapboxMap, density);
+              Convert.toCameraUpdate(call.argument("cameraUpdate"), mMapboxMap, density);
           moveCamera(cameraUpdate, result);
           break;
         }
       case "camera#animate":
         {
           final CameraUpdate cameraUpdate =
-              Convert.toCameraUpdate(call.argument("cameraUpdate"), mapboxMap, density);
+              Convert.toCameraUpdate(call.argument("cameraUpdate"), mMapboxMap, density);
           final Integer duration = call.argument("duration");
 
           animateCamera(cameraUpdate, duration, result);
@@ -761,7 +772,7 @@ final class MapboxMapController
             Double x = call.argument("x");
             Double y = call.argument("y");
             PointF pixel = new PointF(x.floatValue(), y.floatValue());
-            features = mapboxMap.queryRenderedFeatures(pixel, filterExpression, layerIds);
+            features = mMapboxMap.queryRenderedFeatures(pixel, filterExpression, layerIds);
           } else {
             Double left = call.argument("left");
             Double top = call.argument("top");
@@ -770,7 +781,7 @@ final class MapboxMapController
             RectF rectF =
                 new RectF(
                     left.floatValue(), top.floatValue(), right.floatValue(), bottom.floatValue());
-            features = mapboxMap.queryRenderedFeatures(rectF, filterExpression, layerIds);
+            features = mMapboxMap.queryRenderedFeatures(rectF, filterExpression, layerIds);
           }
           List<String> featuresJson = new ArrayList<>();
           for (Feature feature : features) {
@@ -1206,7 +1217,7 @@ final class MapboxMapController
       return;
     }
     final Map<String, Object> arguments = new HashMap<>(2);
-    arguments.put("position", Convert.toJson(mapboxMap.getCameraPosition()));
+    arguments.put("position", Convert.toJson(mMapboxMap.getCameraPosition()));
     methodChannel.invokeMethod("camera#onMove", arguments);
   }
 
@@ -1214,7 +1225,7 @@ final class MapboxMapController
   public void onCameraIdle() {
     final Map<String, Object> arguments = new HashMap<>(2);
     if (trackCameraPosition) {
-      arguments.put("position", Convert.toJson(mapboxMap.getCameraPosition()));
+      arguments.put("position", Convert.toJson(mMapboxMap.getCameraPosition()));
     }
     methodChannel.invokeMethod("camera#onIdle", arguments);
   }
@@ -1239,7 +1250,7 @@ final class MapboxMapController
 
   @Override
   public boolean onMapClick(@NonNull LatLng point) {
-    PointF pointf = mapboxMap.getProjection().toScreenLocation(point);
+    PointF pointf = mMapboxMap.getProjection().toScreenLocation(point);
     RectF rectF = new RectF(pointf.x - 10, pointf.y - 10, pointf.x + 10, pointf.y + 10);
     Feature feature = firstFeatureOnLayers(rectF);
     final Map<String, Object> arguments = new HashMap<>();
@@ -1258,7 +1269,7 @@ final class MapboxMapController
 
   @Override
   public boolean onMapLongClick(@NonNull LatLng point) {
-    PointF pointf = mapboxMap.getProjection().toScreenLocation(point);
+    PointF pointf = mMapboxMap.getProjection().toScreenLocation(point);
     final Map<String, Object> arguments = new HashMap<>(5);
     arguments.put("x", pointf.x);
     arguments.put("y", pointf.y);
@@ -1285,7 +1296,7 @@ final class MapboxMapController
   private void moveCamera(CameraUpdate cameraUpdate, MethodChannel.Result result) {
     if (cameraUpdate != null) {
       // camera transformation not handled yet
-      mapboxMap.moveCamera(
+      mMapboxMap.moveCamera(
           cameraUpdate,
           new OnCameraMoveFinishedListener() {
             @Override
@@ -1325,10 +1336,10 @@ final class MapboxMapController
         };
     if (cameraUpdate != null && duration != null) {
       // camera transformation not handled yet
-      mapboxMap.animateCamera(cameraUpdate, duration, onCameraMoveFinishedListener);
+      mMapboxMap.animateCamera(cameraUpdate, duration, onCameraMoveFinishedListener);
     } else if (cameraUpdate != null) {
       // camera transformation not handled yet
-      mapboxMap.animateCamera(cameraUpdate, onCameraMoveFinishedListener);
+      mMapboxMap.animateCamera(cameraUpdate, onCameraMoveFinishedListener);
     } else {
       result.success(false);
     }
@@ -1409,7 +1420,7 @@ final class MapboxMapController
 
   @Override
   public void setCompassEnabled(boolean compassEnabled) {
-    mapboxMap.getUiSettings().setCompassEnabled(compassEnabled);
+    mMapboxMap.getUiSettings().setCompassEnabled(compassEnabled);
   }
 
   @Override
@@ -1419,28 +1430,28 @@ final class MapboxMapController
 
   @Override
   public void setRotateGesturesEnabled(boolean rotateGesturesEnabled) {
-    mapboxMap.getUiSettings().setRotateGesturesEnabled(rotateGesturesEnabled);
+    mMapboxMap.getUiSettings().setRotateGesturesEnabled(rotateGesturesEnabled);
   }
 
   @Override
   public void setScrollGesturesEnabled(boolean scrollGesturesEnabled) {
-    mapboxMap.getUiSettings().setScrollGesturesEnabled(scrollGesturesEnabled);
+    mMapboxMap.getUiSettings().setScrollGesturesEnabled(scrollGesturesEnabled);
   }
 
   @Override
   public void setTiltGesturesEnabled(boolean tiltGesturesEnabled) {
-    mapboxMap.getUiSettings().setTiltGesturesEnabled(tiltGesturesEnabled);
+    mMapboxMap.getUiSettings().setTiltGesturesEnabled(tiltGesturesEnabled);
   }
 
   @Override
   public void setMinMaxZoomPreference(Float min, Float max) {
-    mapboxMap.setMinZoomPreference(min != null ? min : MapboxConstants.MINIMUM_ZOOM);
-    mapboxMap.setMaxZoomPreference(max != null ? max : MapboxConstants.MAXIMUM_ZOOM);
+    mMapboxMap.setMinZoomPreference(min != null ? min : MapboxConstants.MINIMUM_ZOOM);
+    mMapboxMap.setMaxZoomPreference(max != null ? max : MapboxConstants.MAXIMUM_ZOOM);
   }
 
   @Override
   public void setZoomGesturesEnabled(boolean zoomGesturesEnabled) {
-    mapboxMap.getUiSettings().setZoomGesturesEnabled(zoomGesturesEnabled);
+    mMapboxMap.getUiSettings().setZoomGesturesEnabled(zoomGesturesEnabled);
   }
 
   @Override
@@ -1449,14 +1460,14 @@ final class MapboxMapController
       return;
     }
     this.myLocationEnabled = myLocationEnabled;
-    if (mapboxMap != null) {
+    if (mMapboxMap != null) {
       updateMyLocationEnabled();
     }
   }
 
   @Override
   public void setMyLocationTrackingMode(int myLocationTrackingMode) {
-    if (mapboxMap != null) {
+    if (mMapboxMap != null) {
       // ensure that location is trackable
       updateMyLocationEnabled();
     }
@@ -1464,7 +1475,7 @@ final class MapboxMapController
       return;
     }
     this.myLocationTrackingMode = myLocationTrackingMode;
-    if (mapboxMap != null && locationComponent != null) {
+    if (mMapboxMap != null && locationComponent != null) {
       updateMyLocationTrackingMode();
     }
   }
@@ -1475,49 +1486,49 @@ final class MapboxMapController
       return;
     }
     this.myLocationRenderMode = myLocationRenderMode;
-    if (mapboxMap != null && locationComponent != null) {
+    if (mMapboxMap != null && locationComponent != null) {
       updateMyLocationRenderMode();
     }
   }
 
   public void setLogoViewMargins(int x, int y) {
-    mapboxMap.getUiSettings().setLogoMargins(x, 0, 0, y);
+    mMapboxMap.getUiSettings().setLogoMargins(x, 0, 0, y);
   }
 
   @Override
   public void setCompassGravity(int gravity) {
     switch (gravity) {
       case 0:
-        mapboxMap.getUiSettings().setCompassGravity(Gravity.TOP | Gravity.START);
+        mMapboxMap.getUiSettings().setCompassGravity(Gravity.TOP | Gravity.START);
         break;
       default:
       case 1:
-        mapboxMap.getUiSettings().setCompassGravity(Gravity.TOP | Gravity.END);
+        mMapboxMap.getUiSettings().setCompassGravity(Gravity.TOP | Gravity.END);
         break;
       case 2:
-        mapboxMap.getUiSettings().setCompassGravity(Gravity.BOTTOM | Gravity.START);
+        mMapboxMap.getUiSettings().setCompassGravity(Gravity.BOTTOM | Gravity.START);
         break;
       case 3:
-        mapboxMap.getUiSettings().setCompassGravity(Gravity.BOTTOM | Gravity.END);
+        mMapboxMap.getUiSettings().setCompassGravity(Gravity.BOTTOM | Gravity.END);
         break;
     }
   }
 
   @Override
   public void setCompassViewMargins(int x, int y) {
-    switch (mapboxMap.getUiSettings().getCompassGravity()) {
+    switch (mMapboxMap.getUiSettings().getCompassGravity()) {
       case Gravity.TOP | Gravity.START:
-        mapboxMap.getUiSettings().setCompassMargins(x, y, 0, 0);
+        mMapboxMap.getUiSettings().setCompassMargins(x, y, 0, 0);
         break;
       default:
       case Gravity.TOP | Gravity.END:
-        mapboxMap.getUiSettings().setCompassMargins(0, y, x, 0);
+        mMapboxMap.getUiSettings().setCompassMargins(0, y, x, 0);
         break;
       case Gravity.BOTTOM | Gravity.START:
-        mapboxMap.getUiSettings().setCompassMargins(x, 0, 0, y);
+        mMapboxMap.getUiSettings().setCompassMargins(x, 0, 0, y);
         break;
       case Gravity.BOTTOM | Gravity.END:
-        mapboxMap.getUiSettings().setCompassMargins(0, 0, x, y);
+        mMapboxMap.getUiSettings().setCompassMargins(0, 0, x, y);
         break;
     }
   }
@@ -1526,43 +1537,43 @@ final class MapboxMapController
   public void setAttributionButtonGravity(int gravity) {
     switch (gravity) {
       case 0:
-        mapboxMap.getUiSettings().setAttributionGravity(Gravity.TOP | Gravity.START);
+        mMapboxMap.getUiSettings().setAttributionGravity(Gravity.TOP | Gravity.START);
         break;
       default:
       case 1:
-        mapboxMap.getUiSettings().setAttributionGravity(Gravity.TOP | Gravity.END);
+        mMapboxMap.getUiSettings().setAttributionGravity(Gravity.TOP | Gravity.END);
         break;
       case 2:
-        mapboxMap.getUiSettings().setAttributionGravity(Gravity.BOTTOM | Gravity.START);
+        mMapboxMap.getUiSettings().setAttributionGravity(Gravity.BOTTOM | Gravity.START);
         break;
       case 3:
-        mapboxMap.getUiSettings().setAttributionGravity(Gravity.BOTTOM | Gravity.END);
+        mMapboxMap.getUiSettings().setAttributionGravity(Gravity.BOTTOM | Gravity.END);
         break;
     }
   }
 
   @Override
   public void setAttributionButtonMargins(int x, int y) {
-    switch (mapboxMap.getUiSettings().getAttributionGravity()) {
+    switch (mMapboxMap.getUiSettings().getAttributionGravity()) {
       case Gravity.TOP | Gravity.START:
-        mapboxMap.getUiSettings().setAttributionMargins(x, y, 0, 0);
+        mMapboxMap.getUiSettings().setAttributionMargins(x, y, 0, 0);
         break;
       default:
       case Gravity.TOP | Gravity.END:
-        mapboxMap.getUiSettings().setAttributionMargins(0, y, x, 0);
+        mMapboxMap.getUiSettings().setAttributionMargins(0, y, x, 0);
         break;
       case Gravity.BOTTOM | Gravity.START:
-        mapboxMap.getUiSettings().setAttributionMargins(x, 0, 0, y);
+        mMapboxMap.getUiSettings().setAttributionMargins(x, 0, 0, y);
         break;
       case Gravity.BOTTOM | Gravity.END:
-        mapboxMap.getUiSettings().setAttributionMargins(0, 0, x, y);
+        mMapboxMap.getUiSettings().setAttributionMargins(0, 0, x, y);
         break;
     }
   }
 
   private void updateMyLocationEnabled() {
     if (this.locationComponent == null && myLocationEnabled) {
-      enableLocationComponent(mapboxMap.getStyle());
+      enableLocationComponent(mMapboxMap.getStyle());
     }
 
     if (myLocationEnabled) {
@@ -1699,7 +1710,7 @@ final class MapboxMapController
     if (detector.getPreviousEvent().getActionMasked() == MotionEvent.ACTION_DOWN
         && detector.getPointersCount() == 1) {
       PointF pointf = detector.getFocalPoint();
-      LatLng origin = mapboxMap.getProjection().fromScreenLocation(pointf);
+      LatLng origin = mMapboxMap.getProjection().fromScreenLocation(pointf);
       RectF rectF = new RectF(pointf.x - 10, pointf.y - 10, pointf.x + 10, pointf.y + 10);
       Feature feature = firstFeatureOnLayers(rectF);
       if (feature != null && startDragging(feature, origin)) {
@@ -1711,7 +1722,7 @@ final class MapboxMapController
   }
 
   private void invokeFeatureDrag(PointF pointf, String eventType) {
-    LatLng current = mapboxMap.getProjection().fromScreenLocation(pointf);
+    LatLng current = mMapboxMap.getProjection().fromScreenLocation(pointf);
 
     final Map<String, Object> arguments = new HashMap<>(9);
     arguments.put("id", draggedFeature.id());
