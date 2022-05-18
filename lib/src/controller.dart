@@ -1130,6 +1130,11 @@ class MapboxMapController extends ChangeNotifier {
     return _mapboxGlPlatform.addSource(sourceid, properties);
   }
 
+  /// setFocalPoint
+  Future<void> setFocalPoint(double width, double height) async {
+    return _mapboxGlPlatform.setFocalPoint(width, height);
+  }
+
   /// Add a layer to the map with the given properties
   ///
   /// The returned [Future] completes after the change has been made on the

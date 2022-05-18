@@ -158,6 +158,8 @@ abstract class MapboxGlPlatform {
 
   Future<void> addSource(String sourceId, SourceProperties properties);
 
+  Future<void> setFocalPoint(double width, double height);
+
   @mustCallSuper
   void dispose() {
     // clear all callbacks to avoid cyclic refs

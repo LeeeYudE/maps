@@ -211,8 +211,7 @@ final class MapboxMapController
     observer.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
       @Override
       public void onGlobalLayout() {
-        Log.d(TAG,"地图高度 = " + (String.valueOf(mapView.getWidth())) + " 地图高度 = "+(String.valueOf(mapView.getHeight())));
-        mapboxMap.getUiSettings().setFocalPoint(new PointF(Float.parseFloat(String.valueOf(mapView.getWidth() / 2.0)), Float.parseFloat(String.valueOf(mapView.getHeight() / 2.0))));
+        Log.d(TAG,"地图宽度 = " + (String.valueOf(mapView.getWidth())) + " 地图高度 = "+(String.valueOf(mapView.getHeight())));
         mapView.getViewTreeObserver().removeGlobalOnLayoutListener(this);
       }
     });
@@ -1198,6 +1197,14 @@ final class MapboxMapController
           result.success(null);
           break;
         }
+      case "map#setFocalPoint":
+        final float width = call.argument("width");
+        final float height = call.argument("height");
+        Log.d(TAG,"map#setFocalPoint width = "+String.valueOf(width)+" height = "+String.valueOf(height));
+        mMapboxMap.getUiSettings().setFocalPoint(new PointF(width / 2.0f, height/2.0f));
+
+        result.success(null);
+        break;
       default:
         result.notImplemented();
     }

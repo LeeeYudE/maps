@@ -678,4 +678,13 @@ class MethodChannelMapboxGl extends MapboxGlPlatform {
       'geojsonFeature': jsonEncode(geojsonFeature)
     });
   }
+
+  Future<void> setFocalPoint(
+      double width, double height) async {
+    await _channel.invokeMethod('map#setFocalPoint', <String, dynamic>{
+      'width': width,
+      'height': height
+    });
+  }
+
 }
