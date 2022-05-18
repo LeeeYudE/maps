@@ -949,4 +949,10 @@ class MapboxWebGlPlatform extends MapboxGlPlatform
       }
     }
   }
+
+  @override
+  Future<void> setFocalPoint(double width, double height) {
+    // TODO: implement setFocalPoint
+    throw UnimplementedError();
+  }
 }

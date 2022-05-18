@@ -10,10 +10,12 @@ dependencies:
     git:
       url: https://github.com/LeeeYudE/maps.git
       path: mapbox_gl_platform_interface
+      ref: ee60dba
   mapbox_gl_web:
     git:
       url: https://github.com/LeeeYudE/maps.git
       path: mapbox_gl_web
+      ref: ee60dba
   collection: ^1.15.0
 
 dependency_overrides:
